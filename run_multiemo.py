@@ -175,8 +175,8 @@ def train(args, train_dataset, model, tokenizer):
             print(json.dumps({**logs, **{'step': global_step}}))
             result_to_text_file(logs, output_eval_file)
 
-            if logs['acc'] > current_best:
-                current_best = logs['acc']
+            if logs['eval_acc'] > current_best:
+                current_best = logs['eval_acc']
                 # Save model checkpoint
                 output_dir = args.output_dir
                 if not os.path.exists(output_dir):
