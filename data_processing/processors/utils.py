@@ -56,7 +56,7 @@ class InputExample(object):
 
 class InputFeatures(object):
     """
-    A single set of features of data.
+    A single set of features of data_processing.
 
     Args:
         input_ids: Indices of input sequence tokens in the vocabulary.
@@ -87,7 +87,7 @@ class InputFeatures(object):
 
 
 class DataProcessor(object):
-    """Base class for data converters for sequence classification data sets."""
+    """Base class for data_processing converters for sequence classification data_processing sets."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
         """Gets an example from a dict with tensorflow tensors
@@ -112,7 +112,7 @@ class DataProcessor(object):
         raise NotImplementedError()
 
     def get_labels(self):
-        """Gets the list of labels for this data set."""
+        """Gets the list of labels for this data_processing set."""
         raise NotImplementedError()
 
     @classmethod

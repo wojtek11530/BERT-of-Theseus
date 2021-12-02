@@ -24,10 +24,10 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 from bert_of_theseus import BertForSequenceClassification
 from bert_of_theseus.replacement_scheduler import ConstantReplacementScheduler, LinearReplacementScheduler
 
-from data.processors.multiemo import multiemo_output_modes as output_modes
-from data.processors.multiemo import MultiemoProcessor
-from data.processors.multiemo import multiemo_convert_examples_to_features as convert_examples_to_features
-from data.metrics import multiemo_compute_metrics as compute_metrics
+from data_processing.processors.multiemo import multiemo_output_modes as output_modes
+from data_processing.processors.multiemo import MultiemoProcessor
+from data_processing.processors.multiemo import multiemo_convert_examples_to_features as convert_examples_to_features
+from data_processing.metrics import multiemo_compute_metrics as compute_metrics
 from utils import dictionary_to_json, result_to_text_file
 
 logger = logging.getLogger(__name__)

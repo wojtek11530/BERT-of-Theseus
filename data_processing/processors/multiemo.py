@@ -37,10 +37,10 @@ def multiemo_convert_examples_to_features(
         pad_token_segment_id=0,
         mask_padding_with_zero=True):
     """
-    Loads a data file into a list of ``InputFeatures``
+    Loads a data_processing file into a list of ``InputFeatures``
 
     Args:
-        examples: List of ``InputExamples`` or ``tf.data.Dataset`` containing the examples.
+        examples: List of ``InputExamples`` or ``tf.data_processing.Dataset`` containing the examples.
         tokenizer: Instance of a tokenizer that will tokenize the examples
         max_length: Maximum example length
         task: GLUE task
@@ -54,7 +54,7 @@ def multiemo_convert_examples_to_features(
             actual values)
 
     Returns:
-        If the ``examples`` input is a ``tf.data.Dataset``, will return a ``tf.data.Dataset``
+        If the ``examples`` input is a ``tf.data_processing.Dataset``, will return a ``tf.data_processing.Dataset``
         containing the task-specific features. If the input is a list of ``InputExamples``, will return
         a list of task-specific ``InputFeatures`` which can be fed to the model.
 
