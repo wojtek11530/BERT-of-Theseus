@@ -512,6 +512,8 @@ def main():
 
         report = classification_report(y_true, y_pred, target_names=label_list, output_dict=True)
         report['eval_time'] = diff_seconds
+        report.pop('device')
+
         dictionary_to_json(report, os.path.join(output_dir, "test_results.json"))
 
     # Evaluation
