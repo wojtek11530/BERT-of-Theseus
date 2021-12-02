@@ -60,7 +60,7 @@ def main():
             '--output_dir', 'data/models/bert-of-theseus/multiemo_en_all_sentence',
             '--do_train',
             '--do_eval',
-            '--evaluate_during_training'
+            '--evaluate_during_training',
             '--do_lower_case',
             '--max_seq_length', str(128),
             '--learning_rate', str(learning_rate),
