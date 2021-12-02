@@ -60,13 +60,13 @@ def main():
             '--output_dir', 'data/models/bert-of-theseus/multiemo_en_all_sentence',
             '--do_train',
             '--do_eval',
-            '--do_lower_case'
-            '--max_seq_length',  str(128),
+            '--do_lower_case',
+            '--max_seq_length', str(128),
             '--learning_rate', str(learning_rate),
             '--num_train_epochs', str(num_train_epochs),
             '--weight_decay', str(weight_decay),
-            '--per_gpu_train_batch_size ', str(16),
-            '--per_gpu_eval_batch_size  ', str(16),
+            '--per_gpu_train_batch_size', str(16),
+            '--per_gpu_eval_batch_size', str(16),
             '--replacing_rate', str(0.3),
             '--scheduler_type', 'linear',
             '--scheduler_linear_k', str(0.0006)
