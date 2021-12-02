@@ -284,8 +284,6 @@ def evaluate(args, model, tokenizer, prefix=""):
 
     return results
 
-    return results
-
 
 def load_and_cache_examples(args, task, tokenizer, evaluate=False):
     if args.local_rank not in [-1, 0] and not evaluate:
@@ -544,4 +542,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

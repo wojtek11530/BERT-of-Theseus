@@ -159,7 +159,7 @@ def train(args, train_dataset, model, tokenizer):
 
         if args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
             logs = {}
-            results = evaluate(args, model, tokenizer)
+            results, _, _ = evaluate(args, model, tokenizer)
             for key, value in results.items():
                 eval_key = 'eval_{}'.format(key)
                 logs[eval_key] = float(value)
