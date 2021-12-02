@@ -120,6 +120,8 @@ def train(args, train_dataset, model, tokenizer):
     output_eval_file = os.path.join(args.output_dir, 'eval_results.txt')
 
     for epoch in train_iterator:
+        nb_tr_steps = 0
+
         epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])
         for step, batch in enumerate(epoch_iterator):
             model.train()
@@ -157,6 +159,8 @@ def train(args, train_dataset, model, tokenizer):
                 replacing_rate_scheduler.step()  # Update replace rate scheduler
                 model.zero_grad()
                 global_step += 1
+                nb_tr_steps += 1
+
 
             if args.max_steps > 0 and global_step > args.max_steps:
                 epoch_iterator.close()
@@ -169,7 +173,7 @@ def train(args, train_dataset, model, tokenizer):
                 eval_key = 'eval_{}'.format(key)
                 logs[eval_key] = float(value)
 
-            loss_scalar = (tr_loss - logging_loss) / args.logging_steps
+            loss_scalar = (tr_loss - logging_loss) / nb_tr_steps
             learning_rate_scalar = scheduler.get_lr()[0]
             logs['learning_rate'] = learning_rate_scalar
             logs['epoch'] = epoch + 1
@@ -354,7 +358,7 @@ def main():
     parser.add_argument("--do_train", action='store_true',
                         help="Whether to run training.")
     parser.add_argument("--do_eval", action='store_true',
-                        help="Whether to run eval on the dev set.")
+                        help="Whether to run eval on the test set.")
     parser.add_argument("--evaluate_during_training", action='store_true',
                         help="Rul evaluation during training at each logging step.")
     parser.add_argument("--do_lower_case", action='store_true',
@@ -381,10 +385,6 @@ def main():
     parser.add_argument("--warmup_steps", default=0, type=int,
                         help="Linear warmup over warmup_steps.")
 
-    parser.add_argument('--logging_steps', type=int, default=50,
-                        help="Log every X updates steps.")
-    parser.add_argument('--save_steps', type=int, default=50,
-                        help="Save checkpoint every X updates steps.")
     parser.add_argument("--eval_all_checkpoints", action='store_true',
                         help="Evaluate all checkpoints starting with the same prefix as model_name ending and ending with step number")
     parser.add_argument("--no_cuda", action='store_true',
@@ -499,28 +499,29 @@ def main():
         tokenizer = tokenizer_class.from_pretrained(args.output_dir)
         model.to(args.device)
 
+
     #########################
     #       Test model      #
     #########################
+    if args.do_eval:
+        output_dir = args.output_dir
+        eval_start_time = time.monotonic()
+        model.eval()
+        result, y_logits, y_true = evaluate(args, model, tokenizer)
+        eval_end_time = time.monotonic()
 
-    output_dir = args.output_dir
-    eval_start_time = time.monotonic()
-    model.eval()
-    result, y_logits, y_true = evaluate(args, model, tokenizer)
-    eval_end_time = time.monotonic()
+        diff = timedelta(seconds=eval_end_time - eval_start_time)
+        diff_seconds = diff.total_seconds()
+        result['eval_time'] = diff_seconds
+        result_to_text_file(result, os.path.join(output_dir, "test_results.txt"))
 
-    diff = timedelta(seconds=eval_end_time - eval_start_time)
-    diff_seconds = diff.total_seconds()
-    result['eval_time'] = diff_seconds
-    result_to_text_file(result, os.path.join(output_dir, "test_results.txt"))
+        y_pred = np.argmax(y_logits, axis=1)
+        print('\n\t**** Classification report ****\n')
+        print(classification_report(y_true, y_pred, target_names=label_list))
 
-    y_pred = np.argmax(y_logits, axis=1)
-    print('\n\t**** Classification report ****\n')
-    print(classification_report(y_true, y_pred, target_names=label_list))
-
-    report = classification_report(y_true, y_pred, target_names=label_list, output_dict=True)
-    report['eval_time'] = diff_seconds
-    dictionary_to_json(report, os.path.join(output_dir, "test_results.json"))
+        report = classification_report(y_true, y_pred, target_names=label_list, output_dict=True)
+        report['eval_time'] = diff_seconds
+        dictionary_to_json(report, os.path.join(output_dir, "test_results.json"))
 
     # Evaluation
     # results = {}
