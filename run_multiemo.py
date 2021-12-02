@@ -51,8 +51,7 @@ def train(args, train_dataset, model, tokenizer):
     """ Train the model """
 
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
-    train_sampler = RandomSampler(train_dataset) if args.local_rank == -1 \
-        else DistributedSampler(train_dataset)
+    train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
 
     t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
@@ -92,28 +91,20 @@ def train(args, train_dataset, model, tokenizer):
         logger.warning("[BERT-of-Theseus] We haven't tested our model under multi-gpu. Please be aware!")
         model = torch.nn.DataParallel(model)
 
-    # Distributed training (should be after apex fp16 initialization)
-    if args.local_rank != -1:
-        logger.warning("[BERT-of-Theseus] We haven't tested our model under distributed training. Please be aware!")
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
-                                                          output_device=args.local_rank,
-                                                          find_unused_parameters=True)
-
     # Train!
     logger.info("***** Running training *****")
     logger.info("  Num examples = %d", len(train_dataset))
     logger.info("  Num Epochs = %d", args.num_train_epochs)
     logger.info("  Instantaneous batch size per GPU = %d", args.per_gpu_train_batch_size)
     logger.info("  Total train batch size (w. parallel, distributed & accumulation) = %d",
-                args.train_batch_size * args.gradient_accumulation_steps * (
-                    torch.distributed.get_world_size() if args.local_rank != -1 else 1))
+                args.train_batch_size * args.gradient_accumulation_steps)
     logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
     logger.info("  Total optimization steps = %d", t_total)
 
     global_step = 0
     tr_loss, logging_loss = 0.0, 0.0
     model.zero_grad()
-    train_iterator = trange(int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0])
+    train_iterator = trange(int(args.num_train_epochs), desc="Epoch")
     set_seed(args)  # Added here for reproductibility (even between python 2 and 3)
 
     current_best = 0
@@ -122,7 +113,7 @@ def train(args, train_dataset, model, tokenizer):
     for epoch in train_iterator:
         nb_tr_steps = 0
 
-        epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])
+        epoch_iterator = tqdm(train_dataloader, desc="Iteration")
         for step, batch in enumerate(epoch_iterator):
             model.train()
             batch = tuple(t.to(args.device) for t in batch)
@@ -416,9 +407,9 @@ def main():
     # Setup logging
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
-                        level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
-    logger.warning("Device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
-                   device, args.n_gpu, bool(args.local_rank != -1), args.fp16)
+                        level=logging.INFO)
+    logger.warning("Device: %s, n_gpu: %s, 16-bits training: %s",
+                   device, args.n_gpu, args.fp16)
 
     # Set seed
     set_seed(args)
@@ -481,7 +472,7 @@ def main():
     # you can reload it using from_pretrained()
     if args.do_train:
         # Create output directory if needed
-        if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
+        if not os.path.exists(args.output_dir):
             os.makedirs(args.output_dir)
 
         logger.info("Saving model checkpoint to %s", args.output_dir)
