@@ -70,7 +70,7 @@ def main():
             '--per_gpu_eval_batch_size', str(16),
             '--replacing_rate', str(0.3),
             '--scheduler_type', 'linear',
-            '--scheduler_linear_k', str(0.0006)
+            '--scheduler_linear_k', str(0.00006)
         ]
         cmd += ' '.join(options)
         logger.info(f"Training theseus-of-bert for multiemo_en_all_sentence")
