@@ -462,7 +462,7 @@ def main():
         diff = timedelta(seconds=training_end_time - training_start_time)
         diff_seconds = diff.total_seconds()
 
-        training_parameters = vars(args)
+        training_parameters = deepcopy(vars(args))
         training_parameters['training_time'] = diff_seconds
 
         output_training_params_file = os.path.join(args.output_dir, "training_params.json")
@@ -486,7 +486,6 @@ def main():
     #     tokenizer.save_pretrained(args.output_dir)
     #     # Good practice: save your training arguments together with the trained model
     #     torch.save(args, os.path.join(args.output_dir, 'training_args.bin'))
-
 
     # Load a trained model and vocabulary that you have fine-tuned
     model = model_class.from_pretrained(args.output_dir)
