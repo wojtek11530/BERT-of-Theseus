@@ -91,6 +91,8 @@ def gather_results(ft_model_dir: str, task_name: str) -> Dict[str, Any]:
 
     data['parameters'] = parameters_num
     data['name'] = os.path.basename(ft_model_dir)
+    print(data)
+
     return data
 
 
