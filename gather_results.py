@@ -26,7 +26,9 @@ def main():
     task_name = args.task_name
 
     models_subdirectories = get_immediate_subdirectories(MODELS_FOLDER)
+    print(MODELS_FOLDER)
 
+    print(models_subdirectories)
     data = list()
     for subdirectory in models_subdirectories:
         try:
