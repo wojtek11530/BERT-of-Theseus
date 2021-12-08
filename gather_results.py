@@ -31,11 +31,11 @@ def main():
     print(models_subdirectories)
     data = list()
     for subdirectory in models_subdirectories:
-        try:
-            data_dict = gather_results(subdirectory)
-            data.append(data_dict)
-        except Exception:
-            pass
+        # try:
+        data_dict = gather_results(subdirectory, task_name)
+        data.append(data_dict)
+        # except Exception:
+        #     pass
 
     df = pd.DataFrame(data)
     cols = df.columns.tolist()
