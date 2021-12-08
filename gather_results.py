@@ -9,7 +9,7 @@ from transformers import BertConfig
 from bert_of_theseus import BertForSequenceClassification
 from data_processing.processors.multiemo import MultiemoProcessor
 
-PROJECT_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 DATA_FOLDER = os.path.join(PROJECT_FOLDER, 'data')
 MODELS_FOLDER = os.path.join(DATA_FOLDER, 'models', 'bert-of-theseus')
 
