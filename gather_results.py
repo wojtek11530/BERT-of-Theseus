@@ -39,7 +39,7 @@ def main():
 
     df = pd.DataFrame(data)
     cols = df.columns.tolist()
-    cols = cols[-1:] + cols[:-1]
+    cols = cols[-2:] + cols[:-2]
     df = df[cols]
     df.to_csv(os.path.join(DATA_FOLDER, 'results-bert-of-theseus-' + task_name + '.csv'), index=False)
 
@@ -91,6 +91,7 @@ def gather_results(ft_model_dir: str, task_name: str) -> Dict[str, Any]:
 
     data['parameters'] = parameters_num
     data['name'] = os.path.basename(ft_model_dir)
+    data['model_name'] = 'Bert-of-Theseus'
     print(data)
 
     return data
