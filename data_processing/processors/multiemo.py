@@ -17,22 +17,22 @@
 
 import logging
 import os
-from typing import List
+from typing import List, Dict, Optional
 
-import numpy as np
+import torch
+import torch.utils.data
+
 from .utils import DataProcessor, InputExample, InputFeatures
-
 
 logger = logging.getLogger(__name__)
 
 
 def multiemo_convert_examples_to_features(
         examples, tokenizer,
-        max_length=512,
+        max_length=128,
         task=None,
         label_list=None,
         output_mode=None,
-        pad_on_left=False,
         pad_token=0,
         pad_token_segment_id=0,
         mask_padding_with_zero=True):
@@ -46,7 +46,6 @@ def multiemo_convert_examples_to_features(
         task: GLUE task
         label_list: List of labels. Can be obtained from the processor using the ``processor.get_labels()`` method
         output_mode: String indicating the output mode. Either ``regression`` or ``classification``
-        pad_on_left: If set to ``True``, the examples will be padded on the left rather than on the right (default)
         pad_token: Padding token
         pad_token_segment_id: The segment ID for the padding token (It is usually 0, but can vary such as for XLNet where it is 4)
         mask_padding_with_zero: If set to ``True``, the attention mask will be filled by ``1`` for actual values
@@ -81,30 +80,42 @@ def multiemo_convert_examples_to_features(
             example.text_a,
             example.text_b,
             add_special_tokens=True,
+            truncation=True,
+            padding=False,
             max_length=max_length,
+            return_attention_mask=True,
+            return_token_type_ids=True
         )
-        input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
+        input_ids = inputs["input_ids"]
+        token_type_ids = inputs["token_type_ids"]
+        attention_mask = inputs["attention_mask"]
 
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # tokens are attended to.
-        attention_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
+        # inputs = tokenizer.encode_plus(
+        #     example.text_a,
+        #     example.text_b,
+        #     add_special_tokens=True,
+        #     max_length=max_length,
+        # )
+        # input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
+        #
+        # # The mask has 1 for real tokens and 0 for padding tokens. Only real
+        # # tokens are attended to.
+        # attention_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
+        #
+        # # Zero-pad up to the sequence length.
+        # padding_length = max_length - len(input_ids)
+        #
+        # input_ids = input_ids + ([pad_token] * padding_length)
+        # attention_mask = attention_mask + ([0 if mask_padding_with_zero else 1] * padding_length)
+        # token_type_ids = token_type_ids + ([pad_token_segment_id] * padding_length)
 
-        # Zero-pad up to the sequence length.
-        padding_length = max_length - len(input_ids)
-        if pad_on_left:
-            input_ids = ([pad_token] * padding_length) + input_ids
-            attention_mask = ([0 if mask_padding_with_zero else 1] * padding_length) + attention_mask
-            token_type_ids = ([pad_token_segment_id] * padding_length) + token_type_ids
-        else:
-            input_ids = input_ids + ([pad_token] * padding_length)
-            attention_mask = attention_mask + ([0 if mask_padding_with_zero else 1] * padding_length)
-            token_type_ids = token_type_ids + ([pad_token_segment_id] * padding_length)
+        assert len(input_ids) == max_length, \
+            "Error with input length {} vs {}".format(len(input_ids), max_length)
+        assert len(attention_mask) == max_length, \
+            "Error with input length {} vs {}".format(len(attention_mask), max_length)
+        assert len(token_type_ids) == max_length, \
+            "Error with input length {} vs {}".format(len(token_type_ids), max_length)
 
-        assert len(input_ids) == max_length, "Error with input length {} vs {}".format(len(input_ids), max_length)
-        assert len(attention_mask) == max_length, "Error with input length {} vs {}".format(len(attention_mask),
-                                                                                            max_length)
-        assert len(token_type_ids) == max_length, "Error with input length {} vs {}".format(len(token_type_ids),
-                                                                                            max_length)
         if output_mode == "classification":
             label = label_map[example.label]
         elif output_mode == "regression":
@@ -114,7 +125,7 @@ def multiemo_convert_examples_to_features(
 
         if ex_index < 1:
             logger.info("*** Example ***")
-            logger.info("guid: %s" % (example.guid))
+            logger.info("guid: %s" % example.guid)
             logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
             logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
             logger.info("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
@@ -124,9 +135,65 @@ def multiemo_convert_examples_to_features(
             InputFeatures(input_ids=input_ids,
                           attention_mask=attention_mask,
                           token_type_ids=token_type_ids,
-                          label=label))
+                          label=label)
+        )
 
     return features
+
+
+class Dataset(torch.utils.data.Dataset):
+    def __init__(self, all_input_ids, all_attention_mask, all_token_type_ids, labels: Optional[torch.Tensor] = None):
+        self.data = {
+            'input_ids': all_input_ids,
+            'token_type_ids': all_token_type_ids,
+            'attention_mask': all_attention_mask
+        }
+        self.n_examples = len(self.data['input_ids'])
+        if labels is not None:
+            self.data.update({'labels': labels})
+
+    def __getitem__(self, idx: int):
+        return {key: self.data[key][idx] for key in self.data.keys()}
+
+    def __len__(self):
+        return self.n_examples
+
+
+class SmartCollator:
+    def __init__(self, pad_token_id: int, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pad_token_id = pad_token_id
+
+    def collate_batch(self, batch) -> Dict[str, torch.Tensor]:
+        max_size = max([len(example['input_ids']) for example in batch])
+
+        batch_inputs = list()
+        batch_attention_masks = list()
+        batch_token_type_ids = list()
+        labels = list()
+
+        for item in batch:
+            batch_inputs += [pad_seq(item['input_ids'], max_size, self.pad_token_id)]
+            batch_attention_masks += [pad_seq(item['attention_mask'], max_size, 0)]
+            if 'labels' in item.keys():
+                labels.append(item['labels'])
+            if 'token_type_ids' in item.keys():
+                batch_token_type_ids += [pad_seq(item['token_type_ids'], max_size, 0)]
+
+        out_batch = {
+            "input_ids": torch.tensor(batch_inputs, dtype=torch.long),
+            "attention_mask": torch.tensor(batch_attention_masks, dtype=torch.long)
+        }
+        if len(labels) != 0:
+            out_batch.update({'labels': torch.tensor(labels)})
+        if len(batch_token_type_ids) != 0:
+            out_batch.update({'token_type_ids': torch.tensor(batch_token_type_ids, dtype=torch.long)})
+
+        return out_batch
+
+
+def pad_seq(seq: List[int], max_batch_len: int, pad_value: int) -> List[int]:
+    return seq + (max_batch_len - len(seq)) * [pad_value]
 
 
 class MultiemoProcessor(DataProcessor):

@@ -10,19 +10,18 @@ from datetime import timedelta
 import numpy as np
 import torch
 from sklearn.metrics import classification_report
-from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
-                              TensorDataset)
+from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler)
 
 from tqdm import tqdm, trange
 from copy import deepcopy
 from torch import nn
-from transformers import WEIGHTS_NAME, CONFIG_NAME, BertConfig, BertTokenizer
+from transformers import CONFIG_NAME, BertConfig, BertTokenizer
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 from bert_of_theseus import BertForSequenceClassification
 from bert_of_theseus.replacement_scheduler import ConstantReplacementScheduler, LinearReplacementScheduler
 
-from data_processing.processors.multiemo import multiemo_output_modes as output_modes
+from data_processing.processors.multiemo import multiemo_output_modes as output_modes, Dataset, SmartCollator
 from data_processing.processors.multiemo import MultiemoProcessor
 from data_processing.processors.multiemo import multiemo_convert_examples_to_features as convert_examples_to_features
 from data_processing.metrics import multiemo_compute_metrics as compute_metrics
@@ -55,8 +54,10 @@ def train(args, train_dataset, eval_dataset, model, tokenizer):
     """ Train the model """
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
 
+    collator = SmartCollator(tokenizer.pad_token_id)
     train_sampler = RandomSampler(train_dataset)
-    train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.train_batch_size, collate_fn=collator.collate_batch,
+                                  pin_memory=True, sampler=train_sampler)
 
     t_total = len(train_dataloader) * args.num_train_epochs
 
@@ -132,7 +133,7 @@ def train(args, train_dataset, eval_dataset, model, tokenizer):
 
         if args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
             logs = {}
-            results, _, _ = evaluate(args, model, eval_dataset)
+            results, _, _ = evaluate(args, model, eval_dataset, tokenizer)
             for key, value in results.items():
                 eval_key = 'eval_{}'.format(key)
                 logs[eval_key] = float(value)
@@ -171,10 +172,13 @@ def train(args, train_dataset, eval_dataset, model, tokenizer):
         return global_step, tr_loss
 
 
-def evaluate(args, model, eval_dataset):
+def evaluate(args, model, eval_dataset, tokenizer):
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
+
+    collator = SmartCollator(tokenizer.pad_token_id)
     eval_sampler = SequentialSampler(eval_dataset)
-    dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size)
+    dataloader = DataLoader(eval_dataset, batch_size=args.eval_batch_size, collate_fn=collator.collate_batch,
+                            pin_memory=True, sampler=eval_sampler)
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -225,14 +229,14 @@ def evaluate(args, model, eval_dataset):
     return result, all_logits, out_label_ids
 
 
-def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
+def load_and_cache_examples(args, task, tokenizer, evaluate_set=False, test_set=False):
     _, lang, domain, kind = task.split('_')
     processor = MultiemoProcessor(lang, domain, kind)
     output_mode = output_modes['multiemo']
 
     # Load data features from cache or dataset file
     cached_features_file = os.path.join(args.data_dir, 'cached_{}_{}_{}_{}'.format(
-        'test' if test else ('dev' if evaluate else 'train'),
+        'test' if test_set else ('dev' if evaluate_set else 'train'),
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
         str(task)))
@@ -244,9 +248,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
         logger.info("Creating features from dataset file at %s", args.data_dir)
         label_list = processor.get_labels()
 
-        if test:
+        if test_set:
             examples = processor.get_test_examples(args.data_dir)
-        elif evaluate:
+        elif evaluate_set:
             examples = processor.get_dev_examples(args.data_dir)
         else:
             examples = processor.get_train_examples(args.data_dir)
@@ -264,9 +268,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
         torch.save(features, cached_features_file)
 
     # Convert to Tensors and build dataset
-    all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
-    all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
-    all_token_type_ids = torch.tensor([f.token_type_ids for f in features], dtype=torch.long)
+    all_input_ids = [f.input_ids for f in features]
+    all_attention_mask = [f.attention_mask for f in features]
+    all_token_type_ids = [f.token_type_ids for f in features]
     if output_mode == "classification":
         all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
     elif output_mode == "regression":
@@ -274,7 +278,8 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     else:
         raise ValueError
 
-    dataset = TensorDataset(all_input_ids, all_attention_mask, all_token_type_ids, all_labels)
+    dataset = Dataset(all_input_ids, all_attention_mask, all_token_type_ids, all_labels)
+    # dataset = TensorDataset(all_input_ids, all_attention_mask, all_token_type_ids, all_labels)
     return dataset
 
 
@@ -399,9 +404,11 @@ def main():
 
     # Training
     if args.do_train:
-        train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate=False)
+        train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate_set=False)
         if args.evaluate_during_training:
-            eval_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate=True)
+            eval_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate_set=True)
+        else:
+            eval_dataset = None
 
         # Measure Start Time
         training_start_time = time.monotonic()
@@ -432,12 +439,12 @@ def main():
     #       Test model      #
     #########################
     if args.do_eval:
-        test_dataset = load_and_cache_examples(args, args.task_name, tokenizer, test=True)
+        test_dataset = load_and_cache_examples(args, args.task_name, tokenizer, test_set=True)
         output_dir = args.output_dir
 
         eval_start_time = time.monotonic()
         model.eval()
-        result, y_logits, y_true = evaluate(args, model, test_dataset)
+        result, y_logits, y_true = evaluate(args, model, test_dataset, tokenizer)
         eval_end_time = time.monotonic()
 
         diff = timedelta(seconds=eval_end_time - eval_start_time)
