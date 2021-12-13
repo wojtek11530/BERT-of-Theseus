@@ -57,7 +57,7 @@ def main():
             '--model_name_or_path ', 'data/models/bert-base-uncased',
             '--data_dir', 'data/multiemo2',
             '--task_name', 'multiemo_en_all_sentence',
-            '--output_dir', 'data/models/bert-of-theseus/multiemo_en_all_sentence',
+            '--output_dir', 'data/models/bert-of-theseus',
             '--do_train',
             '--do_eval',
             '--evaluate_during_training',
