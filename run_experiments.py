@@ -76,9 +76,9 @@ def main():
         logger.info(f"Training theseus-of-bert for multiemo_en_all_sentence")
         run_process(cmd)
 
-    # cmd = f'python3 -m gather_results --task_name multiemo_en_all_sentence'
-    # logger.info(f"Gathering results to csv for multiemo_en_all_sentence")
-    # run_process(cmd)
+    cmd = f'python3 -m gather_results --task_name multiemo_en_all_sentence'
+    logger.info(f"Gathering results to csv for multiemo_en_all_sentence")
+    run_process(cmd)
 
 
 def run_process(proc):
