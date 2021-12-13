@@ -13,9 +13,13 @@ logger = logging.getLogger(__name__)
 data_dir = os.path.join('data', 'multiemo2')
 
 batch_size = 16
-num_train_epochs = 3
+num_train_epochs = 4
 learning_rate = 5e-5
 weight_decay = 0.01
+max_length = 128
+
+replacing_rate = 0.3
+scheduler_linear_k = 0.00014
 
 
 def main():
@@ -62,15 +66,15 @@ def main():
             '--do_eval',
             '--evaluate_during_training',
             '--do_lower_case',
-            '--max_seq_length', str(128),
+            '--max_seq_length', str(max_length),
             '--learning_rate', str(learning_rate),
             '--num_train_epochs', str(num_train_epochs),
             '--weight_decay', str(weight_decay),
-            '--per_gpu_train_batch_size', str(16),
-            '--per_gpu_eval_batch_size', str(16),
-            '--replacing_rate', str(0.3),
+            '--per_gpu_train_batch_size', str(batch_size),
+            '--per_gpu_eval_batch_size', str(batch_size),
+            '--replacing_rate', str(replacing_rate),
             '--scheduler_type', 'linear',
-            '--scheduler_linear_k', str(0.00006)
+            '--scheduler_linear_k', str(scheduler_linear_k)
         ]
         cmd += ' '.join(options)
         logger.info(f"Training theseus-of-bert for multiemo_en_all_sentence")
