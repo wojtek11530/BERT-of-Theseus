@@ -167,6 +167,9 @@ def train(args, train_dataset, eval_dataset, model, tokenizer):
                 tokenizer.save_vocabulary(args.output_dir)
                 logger.info("Saving model checkpoint to %s", output_dir)
 
+                if not os.path.exists(os.path.join(output_dir, 'hg_model')):
+                    os.makedirs(os.path.join(output_dir, 'hg_model'))
+
                 model_to_save_hg = deepcopy(model)
                 model_to_save_hg.bert.encoder.layer = model_to_save_hg.bert.encoder.scc_layer
                 model_to_save_hg.bert.config.num_hidden_layers = model_to_save_hg.bert.encoder.scc_n_layer
