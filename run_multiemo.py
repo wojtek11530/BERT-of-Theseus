@@ -159,28 +159,27 @@ def train(args, train_dataset, eval_dataset, model, tokenizer):
                     os.makedirs(output_dir)
 
                 model_to_save = deepcopy(model)
-                del model_to_save.bert.encoder.layer
+                model_to_save.bert.encoder.layer = model_to_save.bert.encoder.scc_layer
+                model_to_save.bert.config.num_hidden_layers = model_to_save.bert.encoder.scc_n_layer
+                del model_to_save.bert.encoder.scc_layer
 
                 model_to_save = model_to_save.module if hasattr(model, 'module') else model_to_save
                 model_to_save.save_pretrained(output_dir)
-                torch.save(args, os.path.join(output_dir, 'training_args.bin'))
-                model_to_save.config.to_json_file(os.path.join(output_dir, CONFIG_NAME))
-                tokenizer.save_vocabulary(args.output_dir)
-                logger.info("Saving model checkpoint to %s", output_dir)
+                tokenizer.save_pretrained(output_dir)
+                logger.info("Saving hg model checkpoint to %s", output_dir)
 
-                hg_model_dir = os.path.join(output_dir, 'hg_model')
-                if not os.path.exists(hg_model_dir):
-                    os.makedirs(hg_model_dir)
+                # del model_to_save.bert.encoder.layer
+                #
+                # model_to_save = model_to_save.module if hasattr(model, 'module') else model_to_save
+                # model_to_save.save_pretrained(output_dir)
+                # torch.save(args, os.path.join(output_dir, 'training_args.bin'))
+                # model_to_save.config.to_json_file(os.path.join(output_dir, CONFIG_NAME))
+                # tokenizer.save_vocabulary(args.output_dir)
+                # logger.info("Saving model checkpoint to %s", output_dir)
 
-                model_to_save_hg = deepcopy(model)
-                model_to_save_hg.bert.encoder.layer = model_to_save_hg.bert.encoder.scc_layer
-                model_to_save_hg.bert.config.num_hidden_layers = model_to_save_hg.bert.encoder.scc_n_layer
-                del model_to_save_hg.bert.encoder.scc_layer
-
-                model_to_save_hg = model_to_save_hg.module if hasattr(model, 'module') else model_to_save_hg
-                model_to_save_hg.save_pretrained(hg_model_dir)
-                tokenizer.save_pretrained(hg_model_dir)
-                logger.info("Saving hg model checkpoint to %s", model_to_save_hg)
+                # hg_model_dir = os.path.join(output_dir, 'hg_model')
+                # if not os.path.exists(hg_model_dir):
+                #     os.makedirs(hg_model_dir)
 
     logger.info("Training finished.")
     if global_step > 0:
@@ -450,19 +449,19 @@ def main():
     #       Test model      #
     #########################
     if args.do_eval:
+        test_dataset = load_and_cache_examples(args, args.task_name, tokenizer, test_set=True)
+
         output_dir = args.output_dir
 
         # Load a trained model and vocabulary that you have fine-tuned
-        config = config_class.from_pretrained(
+        config = BertConfig.from_pretrained(
             output_dir,
             num_labels=num_labels,
             finetuning_task=args.task_name
         )
-        model = model_class.from_pretrained(output_dir, config=config)
-        tokenizer = tokenizer_class.from_pretrained(output_dir)
+        model = OriginalBertForSequenceClassification.from_pretrained(output_dir, config=config)
+        tokenizer = BertTokenizer.from_pretrained(output_dir)
         model.to(device)
-
-        test_dataset = load_and_cache_examples(args, args.task_name, tokenizer, test_set=True)
 
         eval_start_time = time.monotonic()
         model.eval()
@@ -482,36 +481,6 @@ def main():
         report['eval_time'] = diff_seconds
 
         dictionary_to_json(report, os.path.join(output_dir, "test_results.json"))
-
-        # Load a trained model and vocabulary that you have fine-tuned
-        hg_output_dir = os.path.join(output_dir, 'hg_model')
-
-        config_hg = BertConfig.from_pretrained(
-            hg_output_dir,
-            num_labels=num_labels,
-            finetuning_task=args.task_name
-        )
-        model_hg = OriginalBertForSequenceClassification.from_pretrained(hg_output_dir, config=config_hg)
-        tokenizer = BertTokenizer.from_pretrained(output_dir)
-        model_hg.to(device)
-
-        eval_start_time = time.monotonic()
-        model_hg.eval()
-        result, y_logits, y_true = evaluate(args, model_hg, test_dataset, tokenizer)
-        eval_end_time = time.monotonic()
-
-        diff = timedelta(seconds=eval_end_time - eval_start_time)
-        diff_seconds = diff.total_seconds()
-        result['eval_time'] = diff_seconds
-        result_to_text_file(result, os.path.join(hg_output_dir, "test_results.txt"))
-
-        y_pred = np.argmax(y_logits, axis=1)
-        print('\n\t**** Classification report ****\n')
-        print(classification_report(y_true, y_pred, target_names=label_list))
-
-        report = classification_report(y_true, y_pred, target_names=label_list, output_dict=True)
-        report['eval_time'] = diff_seconds
-        dictionary_to_json(report, os.path.join(hg_output_dir, "test_results.json"))
 
 
 if __name__ == "__main__":
