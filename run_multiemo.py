@@ -173,7 +173,7 @@ def train(args, train_dataset, eval_dataset, model, tokenizer):
                 model_to_save_hg = deepcopy(model)
                 model_to_save_hg.bert.encoder.layer = model_to_save_hg.bert.encoder.scc_layer
                 model_to_save_hg.bert.config.num_hidden_layers = model_to_save_hg.bert.encoder.scc_n_layer
-                model_to_save.save_pretrained(os.path.join(output_dir, 'hg_model'))
+                model_to_save_hg.save_pretrained(os.path.join(output_dir, 'hg_model'))
 
     logger.info("Training finished.")
     if global_step > 0:
