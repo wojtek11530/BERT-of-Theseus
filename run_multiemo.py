@@ -205,15 +205,14 @@ def evaluate(args, model, eval_dataset, tokenizer):
 
     for batch in tqdm(dataloader, desc="Evaluating"):
         model.eval()
-        batch = tuple(t.to(args.device) for t in batch)
+        batch = {k: v.to(args.device) for k, v in batch.items()}
 
         with torch.no_grad():
-            inputs = {'input_ids': batch[0],
-                      'attention_mask': batch[1],
-                      'labels': batch[3]}
-            if args.model_type != 'distilbert':
-                inputs['token_type_ids'] = batch[2] if args.model_type in ['bert',
-                                                                           'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
+            inputs = {'input_ids': batch['input_ids'],
+                      'attention_mask': batch['attention_mask'],
+                      'token_type_ids': batch['token_type_ids'],
+                      'labels': batch['labels']}
+
             outputs = model(**inputs)
             tmp_eval_loss, logits = outputs[:2]
             eval_loss += tmp_eval_loss.mean().item()
