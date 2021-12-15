@@ -12,11 +12,12 @@ logger = logging.getLogger(__name__)
 
 data_dir = os.path.join('data', 'multiemo2')
 
+max_seq_length = 128
 batch_size = 16
 num_train_epochs = 4
 learning_rate = 5e-5
 weight_decay = 0.01
-max_length = 128
+warmup_steps = 0
 
 replacing_rate = 0.3
 scheduler_linear_k = 0.00014
@@ -55,30 +56,29 @@ def main():
         logger.info(f"Training bert-base-uncased for multiemo_en_all_sentence")
         run_process(cmd)
 
-    if not os.path.exists(os.path.join(DATA_FOLDER, 'models', 'bert-of-theseus', 'multiemo_en_all_sentence')):
-        cmd = 'python3 run_multiemo.py '
-        options = [
-            '--model_name_or_path ', 'data/models/bert-base-uncased',
-            '--data_dir', 'data/multiemo2',
-            '--task_name', 'multiemo_en_all_sentence',
-            '--output_dir', 'data/models/bert-of-theseus',
-            '--do_train',
-            '--do_eval',
-            '--evaluate_during_training',
-            '--do_lower_case',
-            '--max_seq_length', str(max_length),
-            '--learning_rate', str(learning_rate),
-            '--num_train_epochs', str(num_train_epochs),
-            '--weight_decay', str(weight_decay),
-            '--per_gpu_train_batch_size', str(batch_size),
-            '--per_gpu_eval_batch_size', str(batch_size),
-            '--replacing_rate', str(replacing_rate),
-            '--scheduler_type', 'linear',
-            '--scheduler_linear_k', str(scheduler_linear_k)
-        ]
-        cmd += ' '.join(options)
-        logger.info(f"Training theseus-of-bert for multiemo_en_all_sentence")
-        run_process(cmd)
+    cmd = 'python3 run_multiemo.py '
+    options = [
+        '--model_name_or_path ', 'data/models/bert-base-uncased',
+        '--data_dir', 'data/multiemo2',
+        '--task_name', 'multiemo_en_all_sentence',
+        '--output_dir', 'data/models/bert-of-theseus',
+        '--do_train',
+        '--do_eval',
+        '--evaluate_during_training',
+        '--do_lower_case',
+        '--max_seq_length', str(max_seq_length),
+        '--learning_rate', str(learning_rate),
+        '--num_train_epochs', str(num_train_epochs),
+        '--weight_decay', str(weight_decay),
+        '--per_gpu_train_batch_size', str(batch_size),
+        '--per_gpu_eval_batch_size', str(batch_size),
+        '--replacing_rate', str(replacing_rate),
+        '--scheduler_type', 'linear',
+        '--scheduler_linear_k', str(scheduler_linear_k)
+    ]
+    cmd += ' '.join(options)
+    logger.info(f"Training theseus-of-bert for multiemo_en_all_sentence")
+    run_process(cmd)
 
     cmd = f'python3 -m gather_results --task_name multiemo_en_all_sentence'
     logger.info(f"Gathering results to csv for multiemo_en_all_sentence")
