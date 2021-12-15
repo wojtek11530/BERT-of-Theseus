@@ -58,7 +58,7 @@ def main():
 
     cmd = 'python3 run_multiemo.py '
     options = [
-        '--model_name_or_path ', 'data/models/bert-base-uncased',
+        '--model_name_or_path ', 'data/models/bert-base-uncased/multiemo_en_all_sentence',
         '--data_dir', 'data/multiemo2',
         '--task_name', 'multiemo_en_all_sentence',
         '--output_dir', 'data/models/bert-of-theseus',
