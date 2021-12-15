@@ -7,6 +7,7 @@ import pandas as pd
 from transformers import BertConfig
 
 from bert_of_theseus import BertForSequenceClassification
+from transformers.modeling_bert import BertForSequenceClassification as OriginalBertForSequenceClassification
 from data_processing.processors.multiemo import MultiemoProcessor
 
 PROJECT_FOLDER = os.path.dirname(os.path.abspath(__file__))
@@ -48,6 +49,11 @@ def get_immediate_subdirectories(a_dir):
 
 
 def gather_results(ft_model_dir: str, task_name: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    _, lang, domain, kind = task_name.split('_')
+    processor = MultiemoProcessor(lang, domain, kind)
+    label_list = processor.get_labels()
+    num_labels = len(label_list)
+
     with open(os.path.join(ft_model_dir, 'training_params.json')) as json_file:
         training_data_dict = json.load(json_file)
 
@@ -64,12 +70,6 @@ def gather_results(ft_model_dir: str, task_name: str) -> Tuple[Dict[str, Any], D
     if 'multiemo' not in task_name:
         raise ValueError("Task not found: %s" % task_name)
 
-    _, lang, domain, kind = task_name.split('_')
-    processor = MultiemoProcessor(lang, domain, kind)
-    label_list = processor.get_labels()
-    num_labels = len(label_list)
-
-    # LOADING THE BEST MODEL
     config = BertConfig.from_pretrained(
         ft_model_dir,
         num_labels=num_labels,
@@ -93,22 +93,25 @@ def gather_results(ft_model_dir: str, task_name: str) -> Tuple[Dict[str, Any], D
     print(data)
 
     # HuggingFace model
-    with open(os.path.join(ft_model_dir, 'hg_model', 'test_results.json')) as json_file:
+
+    hg_model_dir = os.path.join(ft_model_dir, 'hg_model')
+
+    with open(os.path.join(hg_model_dir, 'test_results.json')) as json_file:
         test_data_hg = json.load(json_file)
         [test_data__hg_dict] = pd.json_normalize(test_data_hg, sep='_').to_dict(orient='records')
     data_hg = training_data_dict.copy()
     data_hg.update(test_data__hg_dict)
 
-    model_size = os.path.getsize(os.path.join(ft_model_dir, 'pytorch_model.bin'))
+    model_size = os.path.getsize(os.path.join(hg_model_dir, 'pytorch_model.bin'))
     data_hg['model_size'] = model_size
 
-    # LOADING THE BEST MODEL
     config = BertConfig.from_pretrained(
-        ft_model_dir,
+        hg_model_dir,
         num_labels=num_labels,
         finetuning_task=task_name
     )
-    model = BertForSequenceClassification.from_pretrained(ft_model_dir, config=config)
+    model = OriginalBertForSequenceClassification.from_pretrained(hg_model_dir, config=config)
+
     memory_params = sum([param.nelement() * param.element_size() for param in model.parameters()])
     memory_buffers = sum([buf.nelement() * buf.element_size() for buf in model.buffers()])
     memory_used = memory_params + memory_buffers  # in bytes

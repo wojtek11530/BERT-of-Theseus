@@ -20,6 +20,7 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 
 from bert_of_theseus import BertForSequenceClassification
 from bert_of_theseus.replacement_scheduler import ConstantReplacementScheduler, LinearReplacementScheduler
+from transformers.modeling_bert import BertForSequenceClassification as OriginalBertForSequenceClassification
 
 from data_processing.processors.multiemo import multiemo_output_modes as output_modes, Dataset, SmartCollator
 from data_processing.processors.multiemo import MultiemoProcessor
@@ -163,17 +164,23 @@ def train(args, train_dataset, eval_dataset, model, tokenizer):
                 model_to_save = model_to_save.module if hasattr(model, 'module') else model_to_save
                 model_to_save.save_pretrained(output_dir)
                 torch.save(args, os.path.join(output_dir, 'training_args.bin'))
-                model_to_save.config.to_json_file(os.path.join(args.output_dir, CONFIG_NAME))
+                model_to_save.config.to_json_file(os.path.join(output_dir, CONFIG_NAME))
                 tokenizer.save_vocabulary(args.output_dir)
                 logger.info("Saving model checkpoint to %s", output_dir)
 
-                if not os.path.exists(os.path.join(output_dir, 'hg_model')):
-                    os.makedirs(os.path.join(output_dir, 'hg_model'))
+                hg_model_dir = os.path.join(output_dir, 'hg_model')
+                if not os.path.exists(hg_model_dir):
+                    os.makedirs(hg_model_dir)
 
                 model_to_save_hg = deepcopy(model)
                 model_to_save_hg.bert.encoder.layer = model_to_save_hg.bert.encoder.scc_layer
                 model_to_save_hg.bert.config.num_hidden_layers = model_to_save_hg.bert.encoder.scc_n_layer
-                model_to_save_hg.save_pretrained(os.path.join(output_dir, 'hg_model'))
+                del model_to_save_hg.bert.encoder.scc_layer
+
+                model_to_save_hg = model_to_save_hg.module if hasattr(model, 'module') else model_to_save_hg
+                model_to_save_hg.save_pretrained(hg_model_dir)
+                tokenizer.save_pretrained(hg_model_dir)
+                logger.info("Saving hg model checkpoint to %s", model_to_save_hg)
 
     logger.info("Training finished.")
     if global_step > 0:
@@ -446,7 +453,12 @@ def main():
         output_dir = args.output_dir
 
         # Load a trained model and vocabulary that you have fine-tuned
-        model = model_class.from_pretrained(output_dir)
+        config = config_class.from_pretrained(
+            output_dir,
+            num_labels=num_labels,
+            finetuning_task=args.task_name
+        )
+        model = model_class.from_pretrained(output_dir, config=config)
         tokenizer = tokenizer_class.from_pretrained(output_dir)
         model.to(device)
 
@@ -473,7 +485,14 @@ def main():
 
         # Load a trained model and vocabulary that you have fine-tuned
         hg_output_dir = os.path.join(output_dir, 'hg_model')
-        model_hg = model_class.from_pretrained(hg_output_dir)
+
+        config_hg = BertConfig.from_pretrained(
+            hg_output_dir,
+            num_labels=num_labels,
+            finetuning_task=args.task_name
+        )
+        model_hg = OriginalBertForSequenceClassification.from_pretrained(hg_output_dir, config=config_hg)
+        tokenizer = BertTokenizer.from_pretrained(output_dir)
         model_hg.to(device)
 
         eval_start_time = time.monotonic()
