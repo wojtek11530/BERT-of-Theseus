@@ -32,10 +32,7 @@ def multiemo_convert_examples_to_features(
         max_length=128,
         task=None,
         label_list=None,
-        output_mode=None,
-        pad_token=0,
-        pad_token_segment_id=0,
-        mask_padding_with_zero=True):
+        output_mode=None):
     """
     Loads a data_processing file into a list of ``InputFeatures``
 
@@ -46,11 +43,6 @@ def multiemo_convert_examples_to_features(
         task: GLUE task
         label_list: List of labels. Can be obtained from the processor using the ``processor.get_labels()`` method
         output_mode: String indicating the output mode. Either ``regression`` or ``classification``
-        pad_token: Padding token
-        pad_token_segment_id: The segment ID for the padding token (It is usually 0, but can vary such as for XLNet where it is 4)
-        mask_padding_with_zero: If set to ``True``, the attention mask will be filled by ``1`` for actual values
-            and by ``0`` for padded values. If set to ``False``, inverts it (``1`` for padded values, ``0`` for
-            actual values)
 
     Returns:
         If the ``examples`` input is a ``tf.data_processing.Dataset``, will return a ``tf.data_processing.Dataset``
@@ -74,21 +66,7 @@ def multiemo_convert_examples_to_features(
     features = []
     for (ex_index, example) in enumerate(examples):
         if ex_index % 10000 == 0:
-            logger.info("Writing example %d" % (ex_index))
-
-        # inputs = tokenizer.encode_plus(
-        #     example.text_a,
-        #     example.text_b,
-        #     add_special_tokens=True,
-        #     truncation=True,
-        #     padding=False,
-        #     max_length=max_length,
-        #     return_attention_mask=True,
-        #     return_token_type_ids=True
-        # )
-        # input_ids = inputs["input_ids"]
-        # token_type_ids = inputs["token_type_ids"]
-        # attention_mask = inputs["attention_mask"]
+            logger.info("Writing example %d" % ex_index)
 
         inputs = tokenizer.encode_plus(
             example.text_a,
@@ -102,11 +80,6 @@ def multiemo_convert_examples_to_features(
         input_ids = inputs["input_ids"]
         token_type_ids = inputs["token_type_ids"]
         attention_mask = inputs["attention_mask"]
-
-        # input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # tokens are attended to.
-        # attention_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
 
         if output_mode == "classification":
             label = label_map[example.label]

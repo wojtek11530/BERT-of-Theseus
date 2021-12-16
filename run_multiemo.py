@@ -168,19 +168,6 @@ def train(args, train_dataset, eval_dataset, model, tokenizer):
                 tokenizer.save_pretrained(output_dir)
                 logger.info("Saving hg model checkpoint to %s", output_dir)
 
-                # del model_to_save.bert.encoder.layer
-                #
-                # model_to_save = model_to_save.module if hasattr(model, 'module') else model_to_save
-                # model_to_save.save_pretrained(output_dir)
-                # torch.save(args, os.path.join(output_dir, 'training_args.bin'))
-                # model_to_save.config.to_json_file(os.path.join(output_dir, CONFIG_NAME))
-                # tokenizer.save_vocabulary(args.output_dir)
-                # logger.info("Saving model checkpoint to %s", output_dir)
-
-                # hg_model_dir = os.path.join(output_dir, 'hg_model')
-                # if not os.path.exists(hg_model_dir):
-                #     os.makedirs(hg_model_dir)
-
     logger.info("Training finished.")
     if global_step > 0:
         return global_step, tr_loss / global_step
@@ -273,11 +260,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate_set=False, test_set=
         features = convert_examples_to_features(
             examples,
             tokenizer,
-            label_list=label_list,
             max_length=args.max_seq_length,
-            output_mode=output_mode,
-            pad_token=tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0],
-            pad_token_segment_id=0,
+            label_list=label_list,
+            output_mode=output_mode
         )
         logger.info("Saving features into cached file %s", cached_features_file)
         torch.save(features, cached_features_file)
