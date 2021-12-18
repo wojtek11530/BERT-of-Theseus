@@ -1,2 +1,16 @@
-# BERT-of-Theseus is built on Transformers
+### Development tools ###
+
+### Project packages ###
 transformers==2.4.0
+gputil~=1.4.0
+scipy
+future
+Pillow
+numpy~=1.21.2
+pandas~=1.3.3
+scikit-learn~=1.0
+tqdm
+requests
+seaborn
+boto3
+regex
