@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 
 data_dir = os.path.join('data', 'multiemo2')
 
-REP_NUM = 5
+REP_NUM = 1
 
-task_name = 'multiemo_en_all_text'
+task_name = 'multiemo_en_all_sentence'
 
 max_seq_length = 512
 batch_size = 8
@@ -43,7 +43,7 @@ def main():
         run_process(cmd)
         logger.info("Downloading finished")
 
-    if not os.path.exists(os.path.join(DATA_FOLDER, 'models', 'bert-base-uncased', 'multiemo_en_all_sentence')):
+    if not os.path.exists(os.path.join(DATA_FOLDER, 'models', 'bert-base-uncased', task_name)):
         cmd = 'python3 multiemo_fine_tune_bert.py '
         options = [
             '--pretrained_model', 'data/models/bert-base-uncased',
