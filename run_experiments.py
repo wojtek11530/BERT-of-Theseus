@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 
 data_dir = os.path.join('data', 'multiemo2')
 
-REP_NUM = 4
+REP_NUM = 5
+
+task_name = 'multiemo_en_all_sentence'
 
 max_seq_length = 128
 batch_size = 16
@@ -46,24 +48,26 @@ def main():
         options = [
             '--pretrained_model', 'data/models/bert-base-uncased',
             '--data_dir', 'data/multiemo2',
-            '--task_name', 'multiemo_en_all_sentence',
-            '--output_dir', 'data/models/bert-base-uncased/multiemo_en_all_sentence',
-            '--learning_rate', str(learning_rate),
+            '--task_name', task_name,
+            '--output_dir', f'data/models/bert-base-uncased/{task_name}',
             '--num_train_epochs', str(num_train_epochs),
-            '--weight_decay', str(weight_decay),
             '--train_batch_size', str(batch_size),
+            '--learning_rate', str(learning_rate),
+            '--weight_decay', str(weight_decay),
+            '--warmup_proportion', str(warmup_steps),
+            '--max_seq_length', str(max_seq_length),
             '--do_lower_case'
         ]
         cmd += ' '.join(options)
-        logger.info(f"Training bert-base-uncased for multiemo_en_all_sentence")
+        logger.info(f"Training bert-base-uncased for {task_name}")
         run_process(cmd)
 
     for i in range(REP_NUM):
         cmd = 'python3 run_multiemo.py '
         options = [
-            '--model_name_or_path ', 'data/models/bert-base-uncased/multiemo_en_all_sentence',
+            '--model_name_or_path ', f'data/models/bert-base-uncased/{task_name}',
             '--data_dir', 'data/multiemo2',
-            '--task_name', 'multiemo_en_all_sentence',
+            '--task_name', task_name,
             '--output_dir', 'data/models/bert-of-theseus',
             '--do_train',
             '--do_eval',
@@ -80,11 +84,11 @@ def main():
             '--scheduler_linear_k', str(scheduler_linear_k)
         ]
         cmd += ' '.join(options)
-        logger.info(f"Training BERT-OF-THESEUS for multiemo_en_all_sentence")
+        logger.info(f"Training BERT-OF-THESEUS for {task_name}")
         run_process(cmd)
 
-    cmd = f'python3 -m gather_results --task_name multiemo_en_all_sentence'
-    logger.info(f"Gathering results to csv for multiemo_en_all_sentence")
+    cmd = f'python3 -m gather_results --task_name {task_name}'
+    logger.info(f"Gathering results to csv for {task_name}")
     run_process(cmd)
 
 

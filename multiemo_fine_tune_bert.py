@@ -178,12 +178,6 @@ def main():
     args = parser.parse_args()
     logger.info('The args: {}'.format(args))
 
-    # intermediate distillation default parameters
-    default_params = {
-        "multiemo": {"num_train_epochs": 3, "max_seq_length": 128},
-    }
-    acc_tasks = ["multiemo"]
-
     # Prepare devices
     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
     n_gpu = torch.cuda.device_count()
@@ -207,12 +201,6 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     task_name = args.task_name.lower()
-    if task_name in default_params:
-        args.max_seq_len = default_params[task_name]["max_seq_length"]
-
-    if not args.do_eval:
-        if task_name in default_params:
-            args.num_train_epoch = default_params[task_name]["num_train_epochs"]
 
     if 'multiemo' in task_name:
         _, lang, domain, kind = task_name.split('_')
