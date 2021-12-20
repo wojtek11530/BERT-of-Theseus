@@ -16,7 +16,7 @@ REP_NUM = 1
 
 task_name = 'multiemo_en_all_text'
 
-max_seq_length = 512
+max_seq_length = 256
 batch_size = 8
 num_train_epochs = 4
 learning_rate = 5e-5
