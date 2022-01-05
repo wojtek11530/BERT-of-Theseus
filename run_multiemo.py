@@ -372,6 +372,8 @@ def main():
     args.output_mode = output_modes['multiemo']
     label_list = processor.get_labels()
     num_labels = len(label_list)
+    label_map = {label: i for i, label in enumerate(label_list)}
+    labels = list(label_map.values())
 
     args.model_type = args.model_type.lower()
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
@@ -435,7 +437,6 @@ def main():
     #########################
     if args.do_eval:
         test_dataset = load_and_cache_examples(args, args.task_name, tokenizer, test_set=True)
-
         output_dir = args.output_dir
 
         # Load a trained model and vocabulary that you have fine-tuned
@@ -456,16 +457,22 @@ def main():
         diff = timedelta(seconds=eval_end_time - eval_start_time)
         diff_seconds = diff.total_seconds()
         result['eval_time'] = diff_seconds
-        result_to_text_file(result, os.path.join(output_dir, "test_results.txt"))
+
+        if args.task_name in output_dir:
+            result_file_name = 'test_results'
+        else:
+            result_file_name = f'test_results_{args.task_name}'
+
+        result_to_text_file(result, os.path.join(args.output_dir, f"{result_file_name}.txt"))
 
         y_pred = np.argmax(y_logits, axis=1)
         print('\n\t**** Classification report ****\n')
-        print(classification_report(y_true, y_pred, target_names=label_list))
+        print(classification_report(y_true, y_pred, target_names=label_list, labels=labels))
 
-        report = classification_report(y_true, y_pred, target_names=label_list, output_dict=True)
+        report = classification_report(y_true, y_pred, target_names=label_list, labels=labels, output_dict=True)
         report['eval_time'] = diff_seconds
 
-        dictionary_to_json(report, os.path.join(output_dir, "test_results.json"))
+        dictionary_to_json(report, os.path.join(args.output_dir, f"{result_file_name}.json"))
 
 
 if __name__ == "__main__":

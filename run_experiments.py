@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 data_dir = os.path.join('data', 'multiemo2')
 
-REP_NUM = 4
+REP_NUM = 5
 
 task_name = 'multiemo_en_all_text'
 

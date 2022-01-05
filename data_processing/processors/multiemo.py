@@ -166,9 +166,9 @@ class MultiemoProcessor(DataProcessor):
 
     def __init__(self, lang: str, domain: str, kind: str):
         super(MultiemoProcessor, self).__init__()
-        self.lang = lang.lower()
-        self.domain = domain.lower()
-        self.kind = kind.lower()
+        self.lang = lang
+        self.domain = domain
+        self.kind = kind
 
     def get_train_examples(self, data_dir: str) -> List[InputExample]:
         """See base class."""
