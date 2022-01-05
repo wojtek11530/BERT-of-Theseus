@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 
 data_dir = os.path.join('data', 'multiemo2')
 
-REP_NUM = 1
+REP_NUM = 5
 
 max_seq_length = 256
 batch_size = 8
-num_train_epochs = 1
+num_train_epochs = 4
 learning_rate = 5e-5
 weight_decay = 0.01
 warmup_steps = 0
@@ -25,8 +25,7 @@ replacing_rate = 0.3
 scheduler_linear_k = 0.00014
 
 mode_level = 'text'
-domains = ['reviews']
-# domains = ['hotels', 'medicine', 'products', 'reviews']
+domains = ['hotels', 'medicine', 'products', 'reviews']
 
 
 def main():
