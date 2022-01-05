@@ -25,7 +25,7 @@ replacing_rate = 0.3
 scheduler_linear_k = 0.00014
 
 mode_level = 'text'
-domains = ['hotels']
+domains = ['reviews']
 # domains = ['hotels', 'medicine', 'products', 'reviews']
 
 
