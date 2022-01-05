@@ -14,8 +14,8 @@ data_dir = os.path.join('data', 'multiemo2')
 
 REP_NUM = 1
 
-max_seq_length = 128
-batch_size = 16
+max_seq_length = 256
+batch_size = 8
 num_train_epochs = 1
 learning_rate = 5e-5
 weight_decay = 0.01
@@ -24,7 +24,7 @@ warmup_steps = 0
 replacing_rate = 0.3
 scheduler_linear_k = 0.00014
 
-mode_level = 'sentence'
+mode_level = 'text'
 domains = ['hotels']
 # domains = ['hotels', 'medicine', 'products', 'reviews']
 
